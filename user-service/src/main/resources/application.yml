@@ -1,0 +1,32 @@
+# El nombre del servicio — importante para los logs y el gateway
+spring:
+  application:
+    name: user-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5433/user_db
+    username: user_admin
+    password: user_password
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      # create-drop → crea las tablas al iniciar, las borra al cerrar (desarrollo)
+      # update → actualiza las tablas si hay cambios (desarrollo avanzado)
+      # validate → solo valida que las tablas existen (producción)
+      ddl-auto: create-drop
+    show-sql: true    # muestra las queries SQL en consola (útil para debug)
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+# Puerto del servicio
+server:
+  port: 8081
+
+# Variables de JWT — las moveremos a variables de entorno en producción
+jwt:
+  secret: unaClaveSecretaMuyLargaParaJWTDebeSerDe256BitsComoMinimo1234567890
+  expiration: 900000       # 15 minutos en milisegundos
+  refresh-expiration: 604800000  # 7 días en milisegundos
