@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: product-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5434/product_db
+    username: product_admin
+    password: product_password
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+server:
+  port: 8082
+
+# Configuración JWT
+jwt:
+  secret: my-secret-key-for-jwt-signing-must-be-at-least-256-bits-long-for-hmac256-algorithm-use-a-strong-key
+  expiration: 3600000  # 1 hora en milisegundos
+  refresh-expiration: 604800000  # 7 días en milisegundos
+
+# URL del user-service para validar vendedores
+services:
+  user-service-url: http://localhost:8081
