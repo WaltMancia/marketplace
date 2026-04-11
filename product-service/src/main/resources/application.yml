@@ -22,7 +22,8 @@ server:
 
 # Configuración JWT
 jwt:
-  secret: my-secret-key-for-jwt-signing-must-be-at-least-256-bits-long-for-hmac256-algorithm-use-a-strong-key
+  # Debe ser exactamente el mismo secreto que usa user-service para firmar el JWT
+  secret: unaClaveSecretaMuyLargaParaJWTDebeSerDe256BitsComoMinimo1234567890
   expiration: 3600000  # 1 hora en milisegundos
   refresh-expiration: 604800000  # 7 días en milisegundos
 

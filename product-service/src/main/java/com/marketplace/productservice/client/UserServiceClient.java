@@ -30,7 +30,8 @@ public class UserServiceClient {
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 String role = (String) response.getBody().get("role");
-                return "SELLER".equals(role) || "ADMIN".equals(role);
+                String normalizedRole = normalizeRole(role);
+                return "SELLER".equals(normalizedRole) || "ADMIN".equals(normalizedRole);
             }
             return false;
 
@@ -43,6 +44,15 @@ public class UserServiceClient {
             log.error("Error calling user-service: {}", e.getMessage());
             return false;
         }
+    }
+
+    private String normalizeRole(String role) {
+        if (role == null) {
+            return null;
+        }
+
+        String cleanedRole = role.trim().toUpperCase();
+        return cleanedRole.startsWith("ROLE_") ? cleanedRole.substring("ROLE_".length()) : cleanedRole;
     }
 
     // Obtiene el nombre del vendedor para incluirlo en la respuesta

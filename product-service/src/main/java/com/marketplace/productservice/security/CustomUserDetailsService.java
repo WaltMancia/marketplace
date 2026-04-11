@@ -41,14 +41,15 @@ public class CustomUserDetailsService implements UserDetailsService {
             // Extraemos los datos del usuario
             String username = (String) response.get("email");
             String role = (String) response.get("role");
+            String normalizedRole = normalizeRole(role);
 
-            if (username == null || role == null) {
+            if (username == null || normalizedRole == null) {
                 throw new UsernameNotFoundException("Datos de usuario incompletos: " + email);
             }
 
             // Creamos la lista de autoridades (roles) del usuario
             List<SimpleGrantedAuthority> authorities = new ArrayList<>();
-            authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + normalizedRole));
 
             // Retornamos un UserDetails con los datos del usuario
             // Nota: La contraseña no es necesaria aquí porque usamos JWT
@@ -69,7 +70,13 @@ public class CustomUserDetailsService implements UserDetailsService {
             throw new UsernameNotFoundException("Error al cargar el usuario: " + email, e);
         }
     }
+
+    private String normalizeRole(String role) {
+        if (role == null) {
+            return null;
+        }
+
+        String cleanedRole = role.trim().toUpperCase();
+        return cleanedRole.startsWith("ROLE_") ? cleanedRole.substring("ROLE_".length()) : cleanedRole;
+    }
 }
-
-
-
