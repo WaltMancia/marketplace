@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 30px auto; background: white;
+            border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .header { background: #1a1a2e; padding: 30px; text-align: center; }
+        .header h1 { color: white; margin: 0; font-size: 24px; }
+        .body { padding: 30px; }
+        .order-box { background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0; }
+        .order-id { font-size: 28px; font-weight: bold; color: #1a1a2e; }
+        .status-badge { display: inline-block; background: #fff3cd; color: #856404;
+            padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: bold; }
+        .footer { background: #f8f9fa; padding: 20px; text-align: center;
+            color: #666; font-size: 12px; }
+        .btn { display: inline-block; background: #1a1a2e; color: white;
+            padding: 12px 28px; border-radius: 8px; text-decoration: none;
+            font-weight: bold; margin-top: 20px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🛒 Marketplace</h1>
+    </div>
+    <div class="body">
+        <h2>¡Orden recibida!</h2>
+        <p>Hola, hemos recibido tu orden y estamos verificando la disponibilidad del stock.</p>
+
+        <div class="order-box">
+            <div>Número de orden:</div>
+            <div class="order-id" th:text="'#' + ${orderId}">
+                #123
+            </div>
+            <br>
+            <span class="status-badge">⏳ Verificando stock</span>
+        </div>
+
+        <!-- th:each es el equivalente de .map() pero en templates HTML -->
+        <h3>Productos:</h3>
+        <table style="width:100%; border-collapse: collapse;">
+            <tr style="border-bottom: 1px solid #eee;"
+                th:each="item : ${items}">
+                <td style="padding: 10px 0;" th:text="${item.productName}">Producto</td>
+                <td style="text-align:center;" th:text="'x' + ${item.quantity}">x1</td>
+                <td style="text-align:right; font-weight:bold;"
+                    th:text="'$' + ${item.unitPrice}">$0.00</td>
+            </tr>
+        </table>
+
+        <div style="text-align:right; margin-top:15px; font-size:18px; font-weight:bold;">
+            Total: <span th:text="'$' + ${total}">$0.00</span>
+        </div>
+
+        <p style="color:#666; margin-top:20px;">
+            Te notificaremos cuando tu orden sea confirmada.
+        </p>
+    </div>
+    <div class="footer">
+        © 2024 Marketplace · Todos los derechos reservados
+    </div>
+</div>
+</body>
+</html>

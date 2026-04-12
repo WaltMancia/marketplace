@@ -1,4 +1,10 @@
 spring:
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: admin
+    password: admin
+
   application:
     name: product-service
 
@@ -30,3 +36,8 @@ jwt:
 # URL del user-service para validar vendedores
 services:
   user-service-url: http://localhost:8081
+
+rabbitmq:
+  exchange: marketplace.exchange
+  queues:
+    order-created: order.created

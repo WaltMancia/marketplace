@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: notification-service
+
+  # Configuración de email con Mailtrap
+  mail:
+    host: sandbox.smtp.mailtrap.io
+    port: 2525
+    username: f9365eb5f612bd
+    password: 18d6d1514ad84d
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: admin
+    password: admin
+
+server:
+  port: 8084
+
+# Configuración de las queues que este servicio escucha
+rabbitmq:
+  exchange: marketplace.exchange
+  queues:
+    order-created: order.created
+    stock-reserved: stock.reserved
+    stock-failed: stock.reservation.failed
+    order-paid: order.paid
+    # Dead Letter Queues — mensajes que fallaron al procesarse
+    dlq:
+      order-created: order.created.dlq
+      stock-reserved: stock.reserved.dlq
+      stock-failed: stock.reservation.failed.dlq
+
+# Email del remitente
+notification:
+  from-email: noreply@marketplace.com
+  from-name: Marketplace

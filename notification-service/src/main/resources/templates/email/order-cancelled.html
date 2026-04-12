@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; }
+        .container { max-width: 600px; margin: 30px auto; background: white;
+            border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .header { background: #ef4444; padding: 30px; text-align: center; }
+        .header h1 { color: white; margin: 0; }
+        .body { padding: 30px; }
+        .reason-box { background: #fef2f2; border-left: 4px solid #ef4444;
+            padding: 15px; border-radius: 4px; margin: 20px 0; }
+        .footer { background: #f8f9fa; padding: 20px; text-align: center;
+            color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>❌ Orden Cancelada</h1>
+    </div>
+    <div class="body">
+        <h2>Lo sentimos, tu orden fue cancelada</h2>
+        <p>La orden <strong th:text="'#' + ${orderId}">#123</strong>
+            no pudo procesarse.</p>
+
+        <div class="reason-box">
+            <strong>Motivo:</strong>
+            <p th:text="${reason}" style="margin: 5px 0;">
+                Stock insuficiente
+            </p>
+        </div>
+
+        <p>
+            Si tienes preguntas, no dudes en contactarnos.
+            Puedes intentar realizar una nueva orden en cualquier momento.
+        </p>
+    </div>
+    <div class="footer">
+        © 2024 Marketplace
+    </div>
+</div>
+</body>
+</html>
