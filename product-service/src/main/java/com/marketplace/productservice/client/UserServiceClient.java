@@ -25,7 +25,7 @@ public class UserServiceClient {
     // Verifica si un usuario existe y tiene rol de vendedor
     public boolean isValidSeller(Long sellerId) {
         try {
-            String url = userServiceUrl + "/api/v1/users/" + sellerId;
+            String url = userServiceUrl + "/api/v1/users/internal/id/" + sellerId;
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
@@ -58,7 +58,7 @@ public class UserServiceClient {
     // Obtiene el nombre del vendedor para incluirlo en la respuesta
     public Optional<String> getSellerName(Long sellerId) {
         try {
-            String url = userServiceUrl + "/api/v1/users/" + sellerId;
+            String url = userServiceUrl + "/api/v1/users/internal/id/" + sellerId;
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {

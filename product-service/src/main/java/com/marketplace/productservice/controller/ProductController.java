@@ -1,6 +1,7 @@
 package com.marketplace.productservice.controller;
 
 import com.marketplace.productservice.dto.*;
+import com.marketplace.productservice.security.MarketplaceUserDetails;
 import com.marketplace.productservice.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -8,7 +9,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -51,14 +51,10 @@ public class ProductController {
     @PreAuthorize("hasRole('SELLER') or hasRole('ADMIN')")
     public ResponseEntity<ProductResponse> createProduct(
             @Valid @RequestBody ProductRequest request,
-            @AuthenticationPrincipal UserDetails currentUser
+            @AuthenticationPrincipal MarketplaceUserDetails currentUser
     ) {
-        // Necesitamos el ID del seller — viene del JWT
-        // Lo extraemos del UserDetails que Spring Security inyecta
-        // Por ahora usamos el email para buscar el ID — mejoraremos esto con el gateway
-        Long sellerId = extractSellerId(currentUser);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(productService.createProduct(sellerId, request));
+            .body(productService.createProduct(currentUser, request));
     }
 
     @PutMapping("/{id}")
@@ -66,29 +62,18 @@ public class ProductController {
     public ResponseEntity<ProductResponse> updateProduct(
             @PathVariable Long id,
             @Valid @RequestBody ProductRequest request,
-            @AuthenticationPrincipal UserDetails currentUser
+            @AuthenticationPrincipal MarketplaceUserDetails currentUser
     ) {
-        Long sellerId = extractSellerId(currentUser);
-        return ResponseEntity.ok(productService.updateProduct(id, sellerId, request));
+        return ResponseEntity.ok(productService.updateProduct(id, currentUser, request));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('SELLER') or hasRole('ADMIN')")
     public ResponseEntity<Void> deleteProduct(
             @PathVariable Long id,
-            @AuthenticationPrincipal UserDetails currentUser
+            @AuthenticationPrincipal MarketplaceUserDetails currentUser
     ) {
-        Long sellerId = extractSellerId(currentUser);
-        productService.deleteProduct(id, sellerId);
+        productService.deleteProduct(id, currentUser);
         return ResponseEntity.noContent().build();
-    }
-
-    // Extrae el sellerId del token JWT
-    // En el gateway esto se manejará de forma más elegante
-    private Long extractSellerId(UserDetails userDetails) {
-        // El username en Spring Security es el email
-        // Llamamos al user-service para obtener el ID
-        // Esta es una simplificación — en producción el ID vendría directo del JWT
-        return 1L; // placeholder temporal — lo completamos en el Paso 6 con el gateway
     }
 }

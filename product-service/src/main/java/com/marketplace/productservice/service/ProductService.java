@@ -5,6 +5,7 @@ import com.marketplace.productservice.dto.*;
 import com.marketplace.productservice.entity.Category;
 import com.marketplace.productservice.entity.Product;
 import com.marketplace.productservice.entity.ProductStatus;
+import com.marketplace.productservice.security.MarketplaceUserDetails;
 import com.marketplace.productservice.repository.ProductRepository;
 import com.marketplace.productservice.repository.ProductSpecification;
 import lombok.RequiredArgsConstructor;
@@ -32,19 +33,11 @@ public class ProductService {
 
     // @Transactional garantiza que todo el método es atómico
     @Transactional
-    public ProductResponse createProduct(Long sellerId, ProductRequest request) {
-        // Validamos que el seller existe en el user-service
-        if (!userServiceClient.isValidSeller(sellerId)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Solo los vendedores pueden crear productos"
-            );
-        }
-
+        public ProductResponse createProduct(MarketplaceUserDetails currentUser, ProductRequest request) {
         Category category = categoryService.getCategoryEntityById(request.categoryId());
 
         Product product = Product.builder()
-                .sellerId(sellerId)
+                                .sellerId(currentUser.getId())
                 .category(category)
                 .name(request.name())
                 .description(request.description())
@@ -55,7 +48,7 @@ public class ProductService {
                 .build();
 
         Product saved = productRepository.save(product);
-        log.info("Product created: id={}, seller={}", saved.getId(), sellerId);
+                log.info("Product created: id={}, seller={}", saved.getId(), currentUser.getId());
 
         return toResponse(saved);
     }
@@ -118,7 +111,7 @@ public class ProductService {
     @Transactional
     public ProductResponse updateProduct(
             Long productId,
-            Long sellerId,
+            MarketplaceUserDetails currentUser,
             ProductRequest request
     ) {
         Product product = productRepository.findById(productId)
@@ -127,7 +120,7 @@ public class ProductService {
                 ));
 
         // Verificamos que el producto pertenece al vendedor que lo edita
-        if (!product.getSellerId().equals(sellerId)) {
+        if (!currentUser.hasRole("ADMIN") && !product.getSellerId().equals(currentUser.getId())) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "No tienes permiso para editar este producto"
@@ -147,13 +140,13 @@ public class ProductService {
     }
 
     @Transactional
-    public void deleteProduct(Long productId, Long sellerId) {
+        public void deleteProduct(Long productId, MarketplaceUserDetails currentUser) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Producto no encontrado"
                 ));
 
-        if (!product.getSellerId().equals(sellerId)) {
+        if (!currentUser.hasRole("ADMIN") && !product.getSellerId().equals(currentUser.getId())) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "No tienes permiso para eliminar este producto"

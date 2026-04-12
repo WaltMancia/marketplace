@@ -1,4 +1,4 @@
-package com.marketplace.order_service;
+package com.marketplace.orderservice;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

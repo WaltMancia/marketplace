@@ -35,6 +35,11 @@ public class UserController {
         return ResponseEntity.ok(userService.getUserById(id));
     }
 
+    @GetMapping("/internal/id/{id}")
+    public ResponseEntity<UserResponse> getUserByIdInternal(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.getUserById(id));
+    }
+
     // Endpoint interno — solo accesible desde otros microservicios
     // En producción esto estaría protegido por red interna, no por JWT de usuario
     @GetMapping("/internal/{email}")
