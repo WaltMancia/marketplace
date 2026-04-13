@@ -9,7 +9,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 
@@ -47,14 +49,19 @@ public class ProductController {
         return ResponseEntity.ok(productService.getProductBySlug(slug));
     }
 
+    // Reemplaza el método extractSellerId por lectura del header
     @PostMapping
     @PreAuthorize("hasRole('SELLER') or hasRole('ADMIN')")
     public ResponseEntity<ProductResponse> createProduct(
             @Valid @RequestBody ProductRequest request,
-            @AuthenticationPrincipal MarketplaceUserDetails currentUser
+            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
+            @AuthenticationPrincipal UserDetails currentUser
     ) {
+        // Primero intentamos leer del header del Gateway
+        // Si no hay header (llamada directa sin gateway), usamos el JWT
+        Long sellerId = resolveUserId(userIdHeader, currentUser);
         return ResponseEntity.status(HttpStatus.CREATED)
-            .body(productService.createProduct(currentUser, request));
+                .body(productService.createProduct(sellerId, request));
     }
 
     @PutMapping("/{id}")
@@ -62,18 +69,43 @@ public class ProductController {
     public ResponseEntity<ProductResponse> updateProduct(
             @PathVariable Long id,
             @Valid @RequestBody ProductRequest request,
-            @AuthenticationPrincipal MarketplaceUserDetails currentUser
+            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
+            @AuthenticationPrincipal UserDetails currentUser
     ) {
-        return ResponseEntity.ok(productService.updateProduct(id, currentUser, request));
+        Long sellerId = resolveUserId(userIdHeader, currentUser);
+        return ResponseEntity.ok(productService.updateProduct(id, sellerId, request));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('SELLER') or hasRole('ADMIN')")
     public ResponseEntity<Void> deleteProduct(
             @PathVariable Long id,
-            @AuthenticationPrincipal MarketplaceUserDetails currentUser
+            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
+            @AuthenticationPrincipal UserDetails currentUser
     ) {
-        productService.deleteProduct(id, currentUser);
+        Long sellerId = resolveUserId(userIdHeader, currentUser);
+        productService.deleteProduct(id, sellerId);
         return ResponseEntity.noContent().build();
+    }
+
+    // Resuelve el userId priorizando el header del Gateway
+    private Long resolveUserId(
+            String userIdHeader,
+            UserDetails currentUser
+    ) {
+        if (userIdHeader != null && !userIdHeader.isBlank()) {
+            try {
+                return Long.parseLong(userIdHeader);
+            } catch (NumberFormatException e) {
+                // Si el header no es un número válido, usamos el JWT
+            }
+        }
+        // Fallback: el MarketplaceUserDetails tiene el ID real
+        if (currentUser instanceof MarketplaceUserDetails details) {
+            return details.getId();
+        }
+        throw new ResponseStatusException(
+                HttpStatus.UNAUTHORIZED, "No se pudo determinar el usuario"
+        );
     }
 }

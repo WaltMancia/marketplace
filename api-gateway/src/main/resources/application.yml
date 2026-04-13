@@ -1,0 +1,99 @@
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      # Configuración global de CORS — se aplica a todas las rutas
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:5173"  # React dev server
+              - "http://localhost:3000"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+
+      routes:
+        # ── user-service ────────────────────────────────────────
+        # Rutas públicas de auth — sin verificación de JWT
+        - id: user-auth-routes
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/v1/auth/**
+          filters:
+            - name: RequestRateLimiter  # rate limiting básico
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+
+        # Rutas internas de usuarios — sin JWT (llamadas entre servicios)
+        - id: user-internal-routes
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/v1/users/internal/**
+
+        # Rutas protegidas de usuarios
+        - id: user-protected-routes
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/v1/users/**
+          filters:
+            - AuthenticationFilter  # nuestro filtro personalizado
+
+        # ── product-service ─────────────────────────────────────
+        # Rutas públicas de productos (lectura)
+        - id: product-public-routes
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/v1/products/**
+            - Method=GET
+          # Sin filtro de auth — lectura pública
+
+        # Rutas protegidas de productos (escritura)
+        - id: product-protected-routes
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/v1/products/**
+            - Method=POST,PUT,DELETE
+          filters:
+            - AuthenticationFilter
+
+        # Categorías — GET público, POST solo admin
+        - id: category-public-routes
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/v1/categories/**
+            - Method=GET
+
+        - id: category-protected-routes
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/v1/categories/**
+            - Method=POST,PUT,DELETE
+          filters:
+            - AuthenticationFilter
+
+        # ── order-service ────────────────────────────────────────
+        - id: order-routes
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/v1/cart/**,/api/v1/orders/**
+          filters:
+            - AuthenticationFilter
+
+server:
+  port: 8080
+
+jwt:
+  secret: unaClaveSecretaMuyLargaParaJWTDebeSerDe256BitsComoMinimo1234567890
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG  # útil para debug de rutas

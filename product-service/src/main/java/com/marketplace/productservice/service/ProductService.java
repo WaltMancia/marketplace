@@ -5,7 +5,6 @@ import com.marketplace.productservice.dto.*;
 import com.marketplace.productservice.entity.Category;
 import com.marketplace.productservice.entity.Product;
 import com.marketplace.productservice.entity.ProductStatus;
-import com.marketplace.productservice.security.MarketplaceUserDetails;
 import com.marketplace.productservice.repository.ProductRepository;
 import com.marketplace.productservice.repository.ProductSpecification;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +32,7 @@ public class ProductService {
 
     // @Transactional garantiza que todo el método es atómico
     @Transactional
-        public ProductResponse createProduct(MarketplaceUserDetails currentUser, ProductRequest request) {
+        public ProductResponse createProduct(@org.checkerframework.checker.nullness.qual.MonotonicNonNull Long currentUser, ProductRequest request) {
         Category category = categoryService.getCategoryEntityById(request.categoryId());
 
         Product product = Product.builder()
@@ -111,7 +110,7 @@ public class ProductService {
     @Transactional
     public ProductResponse updateProduct(
             Long productId,
-            MarketplaceUserDetails currentUser,
+            @org.checkerframework.checker.nullness.qual.MonotonicNonNull Long currentUser,
             ProductRequest request
     ) {
         Product product = productRepository.findById(productId)
@@ -140,7 +139,7 @@ public class ProductService {
     }
 
     @Transactional
-        public void deleteProduct(Long productId, MarketplaceUserDetails currentUser) {
+        public void deleteProduct(Long productId, @org.checkerframework.checker.nullness.qual.MonotonicNonNull Long currentUser) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Producto no encontrado"

@@ -31,9 +31,15 @@ public class JwtService {
     // ── Generación de tokens ─────────────────────────────────
 
     public String generateAccessToken(UserDetails userDetails) {
-        // Añadimos el rol como claim extra del token
         Map<String, Object> extraClaims = new HashMap<>();
         extraClaims.put("type", "access");
+
+        // Si el UserDetails tiene ID (nuestro MarketplaceUserDetails), lo incluimos
+        if (userDetails instanceof com.marketplace.user_service.entity.User user) {
+            extraClaims.put("userId", user.getId().toString());
+            extraClaims.put("role", user.getRole().name());
+        }
+
         return buildToken(extraClaims, userDetails, accessTokenExpiration);
     }
 
