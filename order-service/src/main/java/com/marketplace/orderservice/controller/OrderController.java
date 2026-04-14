@@ -10,9 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/v1/orders")
@@ -45,23 +43,5 @@ public class OrderController {
             @AuthenticationPrincipal MarketplaceUserDetails currentUser
     ) {
         return ResponseEntity.ok(orderService.getOrderById(id, currentUser.getId()));
-    }
-
-    // Reemplaza el método extractUserId en ambos controllers
-    private Long extractUserId(
-            String userIdHeader,
-            UserDetails currentUser
-    ) {
-        if (userIdHeader != null && !userIdHeader.isBlank()) {
-            try {
-                return Long.parseLong(userIdHeader);
-            } catch (NumberFormatException ignored) {}
-        }
-        if (currentUser instanceof MarketplaceUserDetails details) {
-            return details.getId();
-        }
-        throw new ResponseStatusException(
-                HttpStatus.UNAUTHORIZED, "No se pudo determinar el usuario"
-        );
     }
 }

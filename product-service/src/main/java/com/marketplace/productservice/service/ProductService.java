@@ -26,158 +26,167 @@ import java.math.BigDecimal;
 @RequiredArgsConstructor
 public class ProductService {
 
-    private final ProductRepository productRepository;
-    private final CategoryService categoryService;
-    private final UserServiceClient userServiceClient;
+        private final ProductRepository productRepository;
+        private final CategoryService categoryService;
+        private final UserServiceClient userServiceClient;
 
-    // @Transactional garantiza que todo el método es atómico
-    @Transactional
-        public ProductResponse createProduct(@org.checkerframework.checker.nullness.qual.MonotonicNonNull Long currentUser, ProductRequest request) {
-        Category category = categoryService.getCategoryEntityById(request.categoryId());
+        // @Transactional garantiza que todo el método es atómico
+        @Transactional
+        public ProductResponse createProduct(Long sellerId, ProductRequest request) {
+                if (!userServiceClient.isValidSeller(sellerId)) {
+                        throw new ResponseStatusException(
+                                        HttpStatus.FORBIDDEN,
+                                        "No tienes permiso para crear productos");
+                }
 
-        Product product = Product.builder()
-                                .sellerId(currentUser.getId())
-                .category(category)
-                .name(request.name())
-                .description(request.description())
-                .price(request.price())
-                .stock(request.stock())
-                .imageUrl(request.imageUrl())
-                .status(ProductStatus.ACTIVE)
-                .build();
+                Category category = categoryService.getCategoryEntityById(request.categoryId());
 
-        Product saved = productRepository.save(product);
-                log.info("Product created: id={}, seller={}", saved.getId(), currentUser.getId());
+                Product product = Product.builder()
+                                .sellerId(sellerId)
+                                .category(category)
+                                .name(request.name())
+                                .description(request.description())
+                                .price(request.price())
+                                .stock(request.stock())
+                                .imageUrl(request.imageUrl())
+                                .status(ProductStatus.ACTIVE)
+                                .build();
 
-        return toResponse(saved);
-    }
+                Product saved = productRepository.save(product);
+                log.info("Product created: id={}, seller={}", saved.getId(), sellerId);
 
-    // Búsqueda paginada con filtros opcionales
-    public PageResponse<ProductResponse> searchProducts(
-            String keyword,
-            Long categoryId,
-            BigDecimal minPrice,
-            BigDecimal maxPrice,
-            Long sellerId,
-            int page,
-            int size,
-            String sortBy
-    ) {
-        // Construimos la Specification combinando todos los filtros
-        // Specification.where(null) es el punto de partida neutral
-        Specification<Product> spec = Specification
-                .where(ProductSpecification.hasStatus(ProductStatus.ACTIVE))
-                .and(ProductSpecification.nameContains(keyword))
-                .and(ProductSpecification.hasCategory(categoryId))
-                .and(ProductSpecification.priceBetween(minPrice, maxPrice))
-                .and(ProductSpecification.hasSeller(sellerId));
-
-        // Pageable encapsula paginación y ordenación
-        Pageable pageable = PageRequest.of(
-                page,
-                size,
-                Sort.by(Sort.Direction.DESC, sortBy != null ? sortBy : "createdAt")
-        );
-
-        Page<Product> productPage = productRepository.findAll(spec, pageable);
-
-        return new PageResponse<>(
-                productPage.getContent().stream().map(this::toResponse).toList(),
-                productPage.getNumber(),
-                productPage.getSize(),
-                productPage.getTotalElements(),
-                productPage.getTotalPages(),
-                productPage.isLast()
-        );
-    }
-
-    public ProductResponse getProductById(Long id) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Producto no encontrado"
-                ));
-        return toResponse(product);
-    }
-
-    public ProductResponse getProductBySlug(String slug) {
-        Product product = productRepository.findBySlug(slug)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Producto no encontrado"
-                ));
-        return toResponse(product);
-    }
-
-    @Transactional
-    public ProductResponse updateProduct(
-            Long productId,
-            @org.checkerframework.checker.nullness.qual.MonotonicNonNull Long currentUser,
-            ProductRequest request
-    ) {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Producto no encontrado"
-                ));
-
-        // Verificamos que el producto pertenece al vendedor que lo edita
-        if (!currentUser.hasRole("ADMIN") && !product.getSellerId().equals(currentUser.getId())) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "No tienes permiso para editar este producto"
-            );
+                return toResponse(saved);
         }
 
-        Category category = categoryService.getCategoryEntityById(request.categoryId());
+        // Búsqueda paginada con filtros opcionales
+        public PageResponse<ProductResponse> searchProducts(
+                        String keyword,
+                        Long categoryId,
+                        BigDecimal minPrice,
+                        BigDecimal maxPrice,
+                        Long sellerId,
+                        int page,
+                        int size,
+                        String sortBy) {
+                // Construimos la Specification combinando todos los filtros
+                // Specification.where(null) es el punto de partida neutral
+                Specification<Product> spec = Specification
+                                .where(ProductSpecification.hasStatus(ProductStatus.ACTIVE))
+                                .and(ProductSpecification.nameContains(keyword))
+                                .and(ProductSpecification.hasCategory(categoryId))
+                                .and(ProductSpecification.priceBetween(minPrice, maxPrice))
+                                .and(ProductSpecification.hasSeller(sellerId));
 
-        product.setCategory(category);
-        product.setName(request.name());
-        product.setDescription(request.description());
-        product.setPrice(request.price());
-        product.setStock(request.stock());
-        product.setImageUrl(request.imageUrl());
+                // Pageable encapsula paginación y ordenación
+                Pageable pageable = PageRequest.of(
+                                page,
+                                size,
+                                Sort.by(Sort.Direction.DESC, sortBy != null ? sortBy : "createdAt"));
 
-        return toResponse(productRepository.save(product));
-    }
+                Page<Product> productPage = productRepository.findAll(spec, pageable);
 
-    @Transactional
-        public void deleteProduct(Long productId, @org.checkerframework.checker.nullness.qual.MonotonicNonNull Long currentUser) {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Producto no encontrado"
-                ));
-
-        if (!currentUser.hasRole("ADMIN") && !product.getSellerId().equals(currentUser.getId())) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "No tienes permiso para eliminar este producto"
-            );
+                return new PageResponse<>(
+                                productPage.getContent().stream().map(this::toResponse).toList(),
+                                productPage.getNumber(),
+                                productPage.getSize(),
+                                productPage.getTotalElements(),
+                                productPage.getTotalPages(),
+                                productPage.isLast());
         }
 
-        // Soft delete — cambiamos el status en vez de borrar físicamente
-        product.setStatus(ProductStatus.DELETED);
-        productRepository.save(product);
-        log.info("Product soft-deleted: id={}", productId);
-    }
+        public ProductResponse getProductById(Long id) {
+                Product product = productRepository.findById(id)
+                                .orElseThrow(() -> new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND, "Producto no encontrado"));
+                return toResponse(product);
+        }
 
-    // Mapeo de entidad a DTO — obtiene el nombre del seller del user-service
-    private ProductResponse toResponse(Product product) {
-        String sellerName = userServiceClient
-                .getSellerName(product.getSellerId())
-                .orElse("Vendedor desconocido");
+        public ProductResponse getProductBySlug(String slug) {
+                Product product = productRepository.findBySlug(slug)
+                                .orElseThrow(() -> new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND, "Producto no encontrado"));
+                return toResponse(product);
+        }
 
-        return new ProductResponse(
-                product.getId(),
-                product.getSellerId(),
-                sellerName,
-                product.getCategory().getId(),
-                product.getCategory().getName(),
-                product.getName(),
-                product.getSlug(),
-                product.getDescription(),
-                product.getPrice(),
-                product.getStock(),
-                product.getImageUrl(),
-                product.getStatus(),
-                product.getCreatedAt()
-        );
-    }
+        @Transactional
+        public ProductResponse updateProduct(
+                        Long productId,
+                        Long sellerId,
+                        ProductRequest request) {
+                return updateProduct(productId, sellerId, false, request);
+        }
+
+        @Transactional
+        public ProductResponse updateProduct(
+                        Long productId,
+                        Long sellerId,
+                        boolean isAdmin,
+                        ProductRequest request) {
+                Product product = productRepository.findById(productId)
+                                .orElseThrow(() -> new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND, "Producto no encontrado"));
+
+                // Verificamos que el producto pertenece al vendedor que lo edita
+                if (!isAdmin && !product.getSellerId().equals(sellerId)) {
+                        throw new ResponseStatusException(
+                                        HttpStatus.FORBIDDEN,
+                                        "No tienes permiso para editar este producto");
+                }
+
+                Category category = categoryService.getCategoryEntityById(request.categoryId());
+
+                product.setCategory(category);
+                product.setName(request.name());
+                product.setDescription(request.description());
+                product.setPrice(request.price());
+                product.setStock(request.stock());
+                product.setImageUrl(request.imageUrl());
+
+                return toResponse(productRepository.save(product));
+        }
+
+        @Transactional
+        public void deleteProduct(Long productId, Long sellerId) {
+                deleteProduct(productId, sellerId, false);
+        }
+
+        @Transactional
+        public void deleteProduct(Long productId, Long sellerId, boolean isAdmin) {
+                Product product = productRepository.findById(productId)
+                                .orElseThrow(() -> new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND, "Producto no encontrado"));
+
+                if (!isAdmin && !product.getSellerId().equals(sellerId)) {
+                        throw new ResponseStatusException(
+                                        HttpStatus.FORBIDDEN,
+                                        "No tienes permiso para eliminar este producto");
+                }
+
+                // Soft delete — cambiamos el status en vez de borrar físicamente
+                product.setStatus(ProductStatus.DELETED);
+                productRepository.save(product);
+                log.info("Product soft-deleted: id={}", productId);
+        }
+
+        // Mapeo de entidad a DTO — obtiene el nombre del seller del user-service
+        private ProductResponse toResponse(Product product) {
+                String sellerName = userServiceClient
+                                .getSellerName(product.getSellerId())
+                                .orElse("Vendedor desconocido");
+
+                return new ProductResponse(
+                                product.getId(),
+                                product.getSellerId(),
+                                sellerName,
+                                product.getCategory().getId(),
+                                product.getCategory().getName(),
+                                product.getName(),
+                                product.getSlug(),
+                                product.getDescription(),
+                                product.getPrice(),
+                                product.getStock(),
+                                product.getImageUrl(),
+                                product.getStatus(),
+                                product.getCreatedAt());
+        }
 }

@@ -1,0 +1,8 @@
+spring:
+  jpa:
+    show-sql: false  # silenciamos SQL en tests para logs más limpios
+
+jwt:
+  secret: testSecretKeyMustBe256BitsLongForHmacSha256Algorithm1234567890
+  expiration: 900000
+  refresh-expiration: 604800000

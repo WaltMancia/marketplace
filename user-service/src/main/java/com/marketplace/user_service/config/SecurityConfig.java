@@ -40,6 +40,8 @@ public class SecurityConfig {
                                 // Desactivamos CSRF porque usamos JWT (sin cookies)
                                 // CSRF es necesario con cookies de sesión, no con JWT en headers
                                 .csrf(AbstractHttpConfigurer::disable)
+                                .httpBasic(AbstractHttpConfigurer::disable)
+                                .formLogin(AbstractHttpConfigurer::disable)
 
                                 // Configuramos qué rutas son públicas y cuáles requieren auth
                                 .authorizeHttpRequests(auth -> auth

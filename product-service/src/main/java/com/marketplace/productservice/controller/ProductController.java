@@ -32,11 +32,9 @@ public class ProductController {
             @RequestParam(required = false) Long sellerId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String sortBy
-    ) {
+            @RequestParam(required = false) String sortBy) {
         return ResponseEntity.ok(productService.searchProducts(
-                keyword, categoryId, minPrice, maxPrice, sellerId, page, size, sortBy
-        ));
+                keyword, categoryId, minPrice, maxPrice, sellerId, page, size, sortBy));
     }
 
     @GetMapping("/{id}")
@@ -55,11 +53,11 @@ public class ProductController {
     public ResponseEntity<ProductResponse> createProduct(
             @Valid @RequestBody ProductRequest request,
             @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
-            @AuthenticationPrincipal UserDetails currentUser
-    ) {
+            @AuthenticationPrincipal UserDetails currentUser) {
         // Primero intentamos leer del header del Gateway
         // Si no hay header (llamada directa sin gateway), usamos el JWT
         Long sellerId = resolveUserId(userIdHeader, currentUser);
+        boolean isAdmin = isAdmin(currentUser);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(productService.createProduct(sellerId, request));
     }
@@ -70,10 +68,10 @@ public class ProductController {
             @PathVariable Long id,
             @Valid @RequestBody ProductRequest request,
             @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
-            @AuthenticationPrincipal UserDetails currentUser
-    ) {
+            @AuthenticationPrincipal UserDetails currentUser) {
         Long sellerId = resolveUserId(userIdHeader, currentUser);
-        return ResponseEntity.ok(productService.updateProduct(id, sellerId, request));
+        boolean isAdmin = isAdmin(currentUser);
+        return ResponseEntity.ok(productService.updateProduct(id, sellerId, isAdmin, request));
     }
 
     @DeleteMapping("/{id}")
@@ -81,18 +79,17 @@ public class ProductController {
     public ResponseEntity<Void> deleteProduct(
             @PathVariable Long id,
             @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
-            @AuthenticationPrincipal UserDetails currentUser
-    ) {
+            @AuthenticationPrincipal UserDetails currentUser) {
         Long sellerId = resolveUserId(userIdHeader, currentUser);
-        productService.deleteProduct(id, sellerId);
+        boolean isAdmin = isAdmin(currentUser);
+        productService.deleteProduct(id, sellerId, isAdmin);
         return ResponseEntity.noContent().build();
     }
 
     // Resuelve el userId priorizando el header del Gateway
     private Long resolveUserId(
             String userIdHeader,
-            UserDetails currentUser
-    ) {
+            UserDetails currentUser) {
         if (userIdHeader != null && !userIdHeader.isBlank()) {
             try {
                 return Long.parseLong(userIdHeader);
@@ -105,7 +102,11 @@ public class ProductController {
             return details.getId();
         }
         throw new ResponseStatusException(
-                HttpStatus.UNAUTHORIZED, "No se pudo determinar el usuario"
-        );
+                HttpStatus.UNAUTHORIZED, "No se pudo determinar el usuario");
+    }
+
+    private boolean isAdmin(UserDetails currentUser) {
+        return currentUser instanceof MarketplaceUserDetails details
+                && details.hasRole("ADMIN");
     }
 }
