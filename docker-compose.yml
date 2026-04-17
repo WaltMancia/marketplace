@@ -1,78 +1,208 @@
 version: '3.9'
 
 services:
-
   # ── Bases de datos ──────────────────────────────────────────
-
   user-db:
     image: postgres:16-alpine
-    container_name: user_db
+    container_name: marketplace_user_db
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: user_db
-      POSTGRES_USER: user_admin
-      POSTGRES_PASSWORD: user_password
+      POSTGRES_DB: ${USER_DB_NAME:-user_db}
+      POSTGRES_USER: ${USER_DB_USER:-user_admin}
+      POSTGRES_PASSWORD: ${USER_DB_PASS:-user_pass}
     ports:
-      - "5433:5432"    # Puerto externo diferente para cada BD
+      - "5433:5432"
     volumes:
       - user_db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user_admin -d user_db"]
+      test: ["CMD-SHELL",
+        "pg_isready -U ${USER_DB_USER:-user_admin}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   product-db:
     image: postgres:16-alpine
-    container_name: product_db
+    container_name: marketplace_product_db
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: product_db
-      POSTGRES_USER: product_admin
-      POSTGRES_PASSWORD: product_password
+      POSTGRES_DB: ${PRODUCT_DB_NAME:-product_db}
+      POSTGRES_USER: ${PRODUCT_DB_USER:-product_admin}
+      POSTGRES_PASSWORD: ${PRODUCT_DB_PASS:-product_pass}
     ports:
       - "5434:5432"
     volumes:
       - product_db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U product_admin -d product_db"]
+      test: ["CMD-SHELL",
+        "pg_isready -U ${PRODUCT_DB_USER:-product_admin}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   order-db:
     image: postgres:16-alpine
-    container_name: order_db
+    container_name: marketplace_order_db
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: order_db
-      POSTGRES_USER: order_admin
-      POSTGRES_PASSWORD: order_password
+      POSTGRES_DB: ${ORDER_DB_NAME:-order_db}
+      POSTGRES_USER: ${ORDER_DB_USER:-order_admin}
+      POSTGRES_PASSWORD: ${ORDER_DB_PASS:-order_pass}
     ports:
       - "5435:5432"
     volumes:
       - order_db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U order_admin -d order_db"]
+      test: ["CMD-SHELL",
+        "pg_isready -U ${ORDER_DB_USER:-order_admin}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   # ── Message Broker ──────────────────────────────────────────
-
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: marketplace_rabbitmq
+    restart: unless-stopped
     environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: admin
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-admin}
     ports:
-      - "5672:5672"    # Puerto AMQP (para la app)
-      - "15672:15672"  # Puerto de la UI de administración
+      - "5672:5672"
+      - "15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 10s
-      timeout: 5s
+      interval: 15s
+      timeout: 10s
       retries: 5
+
+  # ── Microservicios ──────────────────────────────────────────
+  user-service:
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
+    container_name: marketplace_user_service
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://user-db:5432/${USER_DB_NAME:-user_db}
+      SPRING_DATASOURCE_USERNAME: ${USER_DB_USER:-user_admin}
+      SPRING_DATASOURCE_PASSWORD: ${USER_DB_PASS:-user_pass}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: 900000
+      JWT_REFRESH_EXPIRATION: 604800000
+      RESET_SECRET: ${RESET_SECRET:-local-reset-secret}
+    depends_on:
+      user-db:
+        condition: service_healthy
+
+  product-service:
+    build:
+      context: .
+      dockerfile: product-service/Dockerfile
+    container_name: marketplace_product_service
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://product-db:5432/${PRODUCT_DB_NAME:-product_db}
+      SPRING_DATASOURCE_USERNAME: ${PRODUCT_DB_USER:-product_admin}
+      SPRING_DATASOURCE_PASSWORD: ${PRODUCT_DB_PASS:-product_pass}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-admin}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASS:-admin}
+      JWT_SECRET: ${JWT_SECRET}
+      SERVICES_USER_SERVICE_URL: http://user-service:8081
+      RESET_SECRET: ${RESET_SECRET:-local-reset-secret}
+    depends_on:
+      product-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+
+  order-service:
+    build:
+      context: .
+      dockerfile: order-service/Dockerfile
+    container_name: marketplace_order_service
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://order-db:5432/${ORDER_DB_NAME:-order_db}
+      SPRING_DATASOURCE_USERNAME: ${ORDER_DB_USER:-order_admin}
+      SPRING_DATASOURCE_PASSWORD: ${ORDER_DB_PASS:-order_pass}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-admin}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASS:-admin}
+      JWT_SECRET: ${JWT_SECRET}
+      SERVICES_USER_SERVICE_URL: http://user-service:8081
+      SERVICES_PRODUCT_SERVICE_URL: http://product-service:8082
+      RESET_SECRET: ${RESET_SECRET:-local-reset-secret}
+    depends_on:
+      order-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
+    container_name: marketplace_notification_service
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-admin}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASS:-admin}
+      SPRING_MAIL_USERNAME: ${MAIL_USERNAME}
+      SPRING_MAIL_PASSWORD: ${MAIL_PASSWORD}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    container_name: marketplace_api_gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      SERVICES_USER_SERVICE_URL: http://user-service:8081
+      SERVICES_PRODUCT_SERVICE_URL: http://product-service:8082
+      SERVICES_ORDER_SERVICE_URL: http://order-service:8083
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+    depends_on:
+      - user-service
+      - product-service
+      - order-service
+
+  # ── Frontend ────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8080/api/v1}
+    container_name: marketplace_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - api-gateway
 
 volumes:
   user_db_data:
