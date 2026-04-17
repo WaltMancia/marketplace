@@ -7,18 +7,10 @@ import HomePage from './pages/HomePage.jsx';
 import ProductsPage from './pages/products/ProductsPage.jsx';
 import ProductDetailPage from './pages/products/ProductDetailPage.jsx';
 import CartPage from './pages/cart/CartPage.jsx';
-
-// Placeholders para el Paso 9
-const OrdersPage = () => (
-  <div className="text-center py-20 text-gray-400">
-    Mis Órdenes — Paso 9
-  </div>
-);
-const OrderDetailPage = () => (
-  <div className="text-center py-20 text-gray-400">
-    Detalle de Orden — Paso 9
-  </div>
-);
+import OrdersPage from './pages/orders/OrdersPage.jsx';
+import OrderDetailPage from './pages/orders/OrderDetailPage.jsx';
+import SellerProductsPage from './pages/seller/SellerProductsPage.jsx';
+import ProductFormPage from './pages/seller/ProductFormPage.jsx';
 
 const App = () => (
   <Routes>
@@ -30,21 +22,37 @@ const App = () => (
       <Route path="/productos" element={<ProductsPage />} />
       <Route path="/productos/:id" element={<ProductDetailPage />} />
 
+      {/* Rutas de comprador */}
       <Route path="/carrito" element={
         <ProtectedRoute>
           <CartPage />
         </ProtectedRoute>
       } />
-
       <Route path="/mis-ordenes" element={
         <ProtectedRoute>
           <OrdersPage />
         </ProtectedRoute>
       } />
-
       <Route path="/mis-ordenes/:id" element={
         <ProtectedRoute>
           <OrderDetailPage />
+        </ProtectedRoute>
+      } />
+
+      {/* Rutas de vendedor */}
+      <Route path="/mis-productos" element={
+        <ProtectedRoute roles={['SELLER', 'ADMIN']}>
+          <SellerProductsPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/mis-productos/nuevo" element={
+        <ProtectedRoute roles={['SELLER', 'ADMIN']}>
+          <ProductFormPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/mis-productos/editar/:id" element={
+        <ProtectedRoute roles={['SELLER', 'ADMIN']}>
+          <ProductFormPage />
         </ProtectedRoute>
       } />
     </Route>

@@ -9,10 +9,21 @@ const useAuth = () => {
     const { setAuth, logout } = useAuthStore();
     const navigate = useNavigate();
 
+    const normalizeAuthResponse = (data) => ({
+        user: {
+            id: data.id,
+            name: data.name,
+            email: data.email,
+            role: data.role,
+        },
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+    });
+
     const login = async (credentials) => {
         setLoading(true);
         try {
-            const data = await loginService(credentials);
+            const data = normalizeAuthResponse(await loginService(credentials));
             setAuth(data.user, data.accessToken, data.refreshToken);
             toast.success(`¡Bienvenido, ${data.user.name}!`);
             navigate('/');
@@ -28,7 +39,7 @@ const useAuth = () => {
     const register = async (userData) => {
         setLoading(true);
         try {
-            const data = await registerService(userData);
+            const data = normalizeAuthResponse(await registerService(userData));
             setAuth(data.user, data.accessToken, data.refreshToken);
             toast.success('¡Cuenta creada exitosamente!');
             navigate('/');

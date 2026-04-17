@@ -28,3 +28,10 @@ export const getCategoriesService = async () => {
     const { data } = await api.get('/categories');
     return data;
 };
+
+export const getSellerProductsService = async (sellerId, params = {}) => {
+    const { data } = await api.get('/products', {
+        params: { sellerId, ...params },
+    });
+    return data;
+};
